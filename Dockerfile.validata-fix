@@ -1,0 +1,10 @@
+# Local patch image built from the upstream Validata image so we can patch Python deps for local dev
+FROM ciskenyacontainer.azurecr.io/validata-cip:1.0.1
+
+# Upgrade pip and setuptools and jaraco packages that are causing import errors
+RUN pip install --no-cache-dir --upgrade pip setuptools \
+    && pip install --no-cache-dir --upgrade jaraco.functools jaraco.text
+
+# Keep the original entrypoint/command
+ENTRYPOINT ["/entrypoint.sh"]
+CMD ["supervisord", "-n"]
