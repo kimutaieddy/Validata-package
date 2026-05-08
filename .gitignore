@@ -1,0 +1,13 @@
+.env
+.env.*
+!.env.example
+
+*.log
+*.pid
+*.seed
+
+.DS_Store
+Thumbs.db
+
+docker-compose.override.yml
+docker-compose.override.yaml

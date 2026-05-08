@@ -30,9 +30,6 @@ The Validata image is hosted in a private registry. Authenticate the Docker daem
 
 
 
-cip: test-uat-cip
-token: CDLQJH3V0PeVsYgfCkVNjO3T9YOugj7ViAMMSFXvW4tMZMBz2xFyJQQJ99CEACrIdLPEqg7NAAABAZCRuUCC
-
 ```bash
 docker login -u <token-username> -p <token-password> ciskenyacontainer.azurecr.io
 ```
