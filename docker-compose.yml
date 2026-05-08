@@ -1,0 +1,77 @@
+# Validata Client Deployment
+#
+# This local compose file runs the Validata app together with PostgreSQL and
+# Redis so the whole stack can be brought up with one command.
+#
+# Prerequisites:
+#   1. Install Docker + Docker Compose on the server.
+#   2. Authenticate to the registry:
+#        docker login yourregistry.azurecr.io
+#      (use the credentials supplied by CISK during onboarding)
+#   3. Fill in .env values.
+#   4. Start services:
+#        docker compose up -d
+#
+# To update: docker compose pull && docker compose up -d
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: validata-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    ports:
+      - "5432:5432"
+    volumes:
+      - validata_postgres_data:/var/lib/postgresql/data
+      - ./db/init-validata.sql:/docker-entrypoint-initdb.d/init-validata.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7.2-alpine
+    container_name: validata-redis
+    restart: unless-stopped
+    command: ["redis-server", "--appendonly", "yes"]
+    ports:
+      - "6379:6379"
+    volumes:
+      - validata_redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  validata-api:
+    image: ${VALIDATA_API_IMAGE}
+    container_name: validata-api
+    restart: unless-stopped
+    env_file:
+      - .env
+    ports:
+      - "80:80"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      - validata_api_logs:/app/logs
+      - validata_api_media:/app/media
+
+volumes:
+  validata_postgres_data:
+    driver: local
+  validata_redis_data:
+    driver: local
+  validata_api_logs:
+    driver: local
+  validata_api_media:
+    driver: local
