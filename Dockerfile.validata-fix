@@ -1,10 +1,16 @@
 # Local patch image built from the upstream Validata image so we can patch Python deps for local dev
 FROM ciskenyacontainer.azurecr.io/validata-cip:1.0.1
 
-# Upgrade pip and setuptools and jaraco packages that are causing import errors
-RUN pip install --no-cache-dir --upgrade pip setuptools \
-    && pip install --no-cache-dir --upgrade jaraco.functools jaraco.text
+# Use python -m pip to avoid replacing the pip script mid-run which can break subsequent
+# invocations inside the same RUN layer. Upgrade only the specific packages we need.
+RUN python -m pip install --no-cache-dir --upgrade setuptools \
+    && python -m pip install --no-cache-dir --upgrade jaraco.functools jaraco.text
 
-# Keep the original entrypoint/command
+# Ensure `redis-cli` and its system libs are present and healthy so the entrypoint
+# can detect Redis readiness (some upstream images have mismatched binaries).
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    libatomic1 redis-tools liblzf1 python3-setuptools && rm -rf /var/lib/apt/lists/*
+
+# Preserve the original entrypoint and command from the base image
 ENTRYPOINT ["/entrypoint.sh"]
 CMD ["supervisord", "-n"]
