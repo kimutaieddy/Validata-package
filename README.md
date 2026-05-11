@@ -172,3 +172,26 @@ Check `REDIS_HOST`, `REDIS_PORT`, and `REDIS_PASS` in `.env`. Ensure the Redis s
 docker logs validata-api --tail 50
 ```
 Share the output with CISK support.
+
+
+
+
+
+
+## //Eddy Ads on //
+
+## Local debugging summary (recent work)
+
+- **Observed:** `validata-api` container ran migrations then exited — `supervisord` failed to stay running.
+- **Root cause(s) found:** the upstream image contained a corrupted `/usr/local/bin/supervisord` (0 bytes). Some containers also lacked `libatomic.so.1` causing `redis-cli` to fail with "file too short" errors.
+- **Temporary workaround applied:** the Compose service was overridden to run `gunicorn server.wsgi:application --bind 0.0.0.0:80 --workers 4 --timeout 120` instead of `supervisord`. This allows the app to start and serve HTTP while debugging continues.
+- **Other fixes applied during debugging:** pinned `setuptools<81` and added Python compatibility shims in a patched image to resolve import issues (`jaraco.functools`, `platformdirs`, etc.).
+- **Current status:** application responds on `http://localhost:8080` (or your reverse-proxy) and migrations completed successfully. PostgreSQL and Redis are healthy.
+
+## Recommended next steps (restore upstream image hygiene)
+
+- Rebuild or request a replacement image from CISK with a valid `supervisord` binary and required system libs (`libatomic1`, `liblzf1`) installed.
+- If rebuilding locally, ensure the Dockerfile installs `libatomic1` and `redis-tools` and does not accidentally truncate binaries when copying files.
+- Once a fixed image is available, remove the `command: gunicorn ...` override from `docker-compose.yml` so the container uses the intended process manager.
+- Optionally keep the `gunicorn` override in development environments as a supported alternative.
+

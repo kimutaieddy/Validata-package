@@ -1,6 +1,11 @@
 {
     "chat.tools.terminal.autoApprove": {
         "docker compose": true,
-        "docker run": true
+        "docker run": true,
+        "docker build": true,
+        "/^cmd /c docker compose ps ; cmd /c curl -I http://localhost:8080$/": {
+            "approve": true,
+            "matchCommandLine": true
+        }
     }
 }

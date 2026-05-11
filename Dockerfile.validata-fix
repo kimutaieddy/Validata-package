@@ -1,16 +1,82 @@
-# Local patch image built from the upstream Validata image so we can patch Python deps for local dev
 FROM ciskenyacontainer.azurecr.io/validata-cip:1.0.1
 
-# Use python -m pip to avoid replacing the pip script mid-run which can break subsequent
-# invocations inside the same RUN layer. Upgrade only the specific packages we need.
-RUN python -m pip install --no-cache-dir --upgrade setuptools \
+# Pin setuptools to a version that still exposes top-level pkg_resources,
+# which drf_yasg imports during Django startup.
+RUN python -m pip install --no-cache-dir --force-reinstall "setuptools<81" \
     && python -m pip install --no-cache-dir --upgrade jaraco.functools jaraco.text
 
-# Ensure `redis-cli` and its system libs are present and healthy so the entrypoint
-# can detect Redis readiness (some upstream images have mismatched binaries).
+# Restore the Redis client and its shared libraries so the entrypoint can
+# detect Redis readiness without crashing.
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    libatomic1 redis-tools liblzf1 python3-setuptools && rm -rf /var/lib/apt/lists/*
+    libatomic1 liblzf1 redis-tools python3-setuptools && rm -rf /var/lib/apt/lists/*
 
-# Preserve the original entrypoint and command from the base image
+# Add small compatibility shims for the symbols the bundled app imports from jaraco.
+RUN python - <<'PY'
+from pathlib import Path
+
+functools_init = Path('/usr/local/lib/python3.12/site-packages/jaraco/functools/__init__.py')
+context_init = Path('/usr/local/lib/python3.12/site-packages/jaraco/context/__init__.py')
+
+functools_init.write_text(functools_init.read_text() + """
+
+def compose(*functions):
+    def _composed(value):
+        for function in reversed(functions):
+            value = function(value)
+        return value
+
+    return _composed
+
+
+def method_cache(function):
+    return function
+""")
+
+context_init.write_text(context_init.read_text() + """
+
+class ExceptionTrap:
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc, tb):
+        return False
+
+
+class ExceptionTrap:
+    def __init__(self, *exceptions):
+        self.exceptions = exceptions
+
+    @property
+    def passes(self):
+        def _decorator(function):
+            return function
+
+        return _decorator
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc, tb):
+        return False
+""")
+
+platformdirs_init = Path('/usr/local/lib/python3.12/site-packages/platformdirs/__init__.py')
+platformdirs_init.write_text(platformdirs_init.read_text() + """
+
+def user_cache_dir(appname=None, appauthor=None, version=None, roaming=False):
+    import os
+    base = os.environ.get('LOCALAPPDATA') or os.environ.get('APPDATA') or '/tmp'
+    parts = [base]
+    if appauthor:
+        parts.append(appauthor)
+    if appname:
+        parts.append(appname)
+    if version:
+        parts.append(version)
+    return os.path.join(*parts)
+""")
+PY
+
+# Keep the original startup behavior.
 ENTRYPOINT ["/entrypoint.sh"]
 CMD ["supervisord", "-n"]

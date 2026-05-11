@@ -1,0 +1,17 @@
+{
+	"version": "2.0.0",
+	"tasks": [
+		{
+			"label": "reset-stack",
+			"type": "shell",
+			"command": "cmd",
+			"args": [
+				"/c",
+				"docker compose down -v && docker compose up -d"
+			],
+			"isBackground": false,
+			"problemMatcher": [],
+			"group": "build"
+		}
+	]
+}
