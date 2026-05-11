@@ -55,7 +55,9 @@ services:
     restart: unless-stopped
     env_file:
       - .env
-    command: sh -c "gunicorn server.wsgi:application --bind 0.0.0.0:9001 --workers 4 --timeout 120 & caddy run --config /etc/caddy/Caddyfile --adapter caddyfile"
+    command: gunicorn server.wsgi:application --bind 0.0.0.0:9001 --workers 4 --timeout 120
+    expose:
+      - "9001"
     depends_on:
       postgres:
         condition: service_healthy
@@ -64,8 +66,20 @@ services:
     volumes:
       - validata_api_logs:/app/logs
       - validata_api_media:/app/media
+
+  nginx:
+    build:
+      context: .
+      dockerfile: Dockerfile.nginx
+      args:
+        VALIDATA_API_IMAGE: ${VALIDATA_API_IMAGE}
+    container_name: validata-nginx
+    restart: unless-stopped
     ports:
       - "8080:80"
+    depends_on:
+      validata-api:
+        condition: service_started
 
 volumes:
   validata_postgres_data:
