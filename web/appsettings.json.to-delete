@@ -1,0 +1,12 @@
+﻿{
+  "Validata": {
+    # "BaseAddress": "https://api-ppe-san.livelycoast-6b5f4462.southafricanorth.azurecontainerapps.io/",
+    "BaseAddress": "http://127.0.0.1:9001/",
+    "ApiUrl": "v1",
+    "DeploymentMode": "Cip",
+    "MaximumFileUploadCount": 20,
+    "TokenRefreshInterval": 60000,
+    "FilesUpdateInterval": 3,
+    "UpdatesUpdateInterval": 120000
+  }
+}

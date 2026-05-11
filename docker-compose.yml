@@ -55,9 +55,7 @@ services:
     restart: unless-stopped
     env_file:
       - .env
-    command: gunicorn server.wsgi:application --bind 0.0.0.0:80 --workers 4 --timeout 120
-    ports:
-      - "8080:80"
+    command: sh -c "gunicorn server.wsgi:application --bind 0.0.0.0:9001 --workers 4 --timeout 120 & caddy run --config /etc/caddy/Caddyfile --adapter caddyfile"
     depends_on:
       postgres:
         condition: service_healthy
@@ -66,6 +64,8 @@ services:
     volumes:
       - validata_api_logs:/app/logs
       - validata_api_media:/app/media
+    ports:
+      - "8080:80"
 
 volumes:
   validata_postgres_data:
