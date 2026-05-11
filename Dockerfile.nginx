@@ -15,7 +15,7 @@ server {
     client_max_body_size 1500m;
 
     location /v1/ {
-        proxy_pass http://validata-api:9001/;
+        proxy_pass http://validata-api:9001;
         proxy_http_version 1.1;
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
